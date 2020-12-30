@@ -138,7 +138,7 @@ exposure AS (
 
     SELECT
       address,
-      evt_block_week
+      evt_block_week,
       sum(amount) AS exposure
     FROM moves
     WHERE type IN ('mint', 'burn', 'transfer',
