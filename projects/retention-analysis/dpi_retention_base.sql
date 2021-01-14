@@ -3,7 +3,7 @@ WITH transfers AS (
   SELECT
     tr."from" AS address,
     -tr.value / 1e18 AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
+    date_trunc('minute', evt_block_time) AS evt_block_minute,
     CASE
       -- WHEN tr."to" = '\x4d5ef58aac27d99935e5b6b4a6778ff292059991' THEN 'uniswap_lp'
       WHEN tr."to" = '\x0bcaea3571448877ff875bc3825ccf54e5d04df0' THEN 'balancer_pool'
@@ -20,7 +20,7 @@ WITH transfers AS (
   SELECT
     tr."to" AS address,
     tr.value / 1e18 AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
+    date_trunc('minute', evt_block_time) AS evt_block_minute,
     CASE
       -- WHEN tr."from" = '\x4d5ef58aac27d99935e5b6b4a6778ff292059991' THEN 'uniswap_lp'
       WHEN tr."from" = '\x0bcaea3571448877ff875bc3825ccf54e5d04df0' THEN 'balancer_pool'
@@ -34,62 +34,12 @@ WITH transfers AS (
 
 ),
 
-uniswap AS (
-
-  SELECT
-    sender AS address,
-    (amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'uniswap_mint' AS type,
-    evt_tx_hash
-  FROM uniswap_v2."Pair_evt_Mint"
-  WHERE contract_address = '\x4d5ef58aac27d99935e5b6b4a6778ff292059991'
-
-  UNION ALL
-
-  SELECT
-    "to" AS address,
-    -(amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'uniswap_burn' AS type,
-    evt_tx_hash
-  FROM uniswap_v2."Pair_evt_Burn"
-  WHERE contract_address = '\x4d5ef58aac27d99935e5b6b4a6778ff292059991'
-      AND "to" != '\x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
-
-),
-
-sushi AS (
-
-  SELECT
-    sender AS address,
-    (amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'sushi_mint' AS type,
-    evt_tx_hash
-  FROM sushi."Pair_evt_Mint"
-  WHERE contract_address = '\x34b13f8cd184f55d0bd4dd1fe6c07d46f245c7ed'
-
-  UNION ALL
-
-  SELECT
-    "to" AS address,
-    -(amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'sushi_burn' AS type,
-    evt_tx_hash
-  FROM sushi."Pair_evt_Burn"
-  WHERE contract_address = '\x34b13f8cd184f55d0bd4dd1fe6c07d46f245c7ed'
-    AND "to" != '\xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f'
-
-),
-
 sushi_add AS (
 
   SELECT
     "to" AS address,
     ("output_amountToken"/1e18) AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'sushi_add' AS type,
     call_tx_hash AS evt_tx_hash
   FROM sushi."Router02_call_addLiquidityETH"
@@ -104,7 +54,7 @@ sushi_add AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN ("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'sushi_add' AS type,
     call_tx_hash AS evt_tx_hash
   FROM sushi."Router02_call_addLiquidity"
@@ -118,7 +68,7 @@ sushi_remove AS (
   SELECT
     "to" AS address,
     -("output_amountToken"/1e18) AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'sushi_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM sushi."Router02_call_removeLiquidityETH"
@@ -129,7 +79,7 @@ sushi_remove AS (
   SELECT
     "to" AS address,
     -("output_amountToken"/1e18) AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'sushi_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM sushi."Router02_call_removeLiquidityETHWithPermit"
@@ -144,7 +94,7 @@ sushi_remove AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN -("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'sushi_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM sushi."Router02_call_removeLiquidity"
@@ -160,7 +110,7 @@ sushi_remove AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN -("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'sushi_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM sushi."Router02_call_removeLiquidityWithPermit"
@@ -174,7 +124,7 @@ uniswap_add AS (
   SELECT
     "to" AS address,
     ("output_amountToken"/1e18) AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_add' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router02_call_addLiquidityETH"
@@ -189,7 +139,7 @@ uniswap_add AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN ("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_add' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router01_call_addLiquidity"
@@ -205,7 +155,7 @@ uniswap_add AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN ("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_add' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router02_call_addLiquidity"
@@ -219,7 +169,7 @@ uniswap_remove AS (
   SELECT
     "to" AS address,
     -("output_amountToken"/1e18) AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router02_call_removeLiquidityETHWithPermit"
@@ -230,7 +180,7 @@ uniswap_remove AS (
   SELECT
     "to" AS address,
     -("output_amountToken"/1e18) AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router02_call_removeLiquidityETH"
@@ -245,7 +195,7 @@ uniswap_remove AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN -("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router01_call_removeLiquidity"
@@ -261,7 +211,7 @@ uniswap_remove AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN -("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router02_call_removeLiquidity"
@@ -277,7 +227,7 @@ uniswap_remove AS (
       WHEN "tokenB" = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN -("output_amountB"/1e18)
       ELSE 0
     END AS amount,
-    date_trunc('week', call_block_time) AS evt_block_week,
+    date_trunc('minute', call_block_time) AS evt_block_minute,
     'uniswap_remove' AS type,
     call_tx_hash AS evt_tx_hash
   FROM uniswap_v2."Router02_call_removeLiquidityWithPermit"
@@ -346,7 +296,7 @@ moves AS (
   SELECT
     address,
     amount,
-    evt_block_week,
+    evt_block_minute,
     type,
     evt_tx_hash
   FROM liquidity_providing
@@ -354,62 +304,23 @@ moves AS (
 
 ),
 
-exposure AS (
+actions AS (
 
     SELECT
       m.address,
-      evt_block_week,
-      sum(amount) AS exposure
+      m.evt_block_minute,
+      m.amount,
+      m.type,
+      m.evt_tx_hash
     FROM moves m
     LEFT JOIN contracts c ON m.address = c.address
     WHERE c.type IS NULL
       AND m.type IN ('mint', 'burn', 'transfer',
       'uniswap_add', 'uniswap_remove', 'sushi_add', 'sushi_remove')
-    GROUP BY 1, 2
-    ORDER BY 1, 2
-
-),
-
-address_by_date  AS (
-
-    SELECT
-        DISTINCT
-        t1.address,
-        t2.evt_block_week
-    FROM exposure t1
-    CROSS JOIN (
-        SELECT
-            DISTINCT(evt_block_week)
-        FROM exposure
-    ) t2
-
-),
-
-temp AS (
-
-  SELECT
-    a.address,
-    a.evt_block_week,
-    CASE e.exposure
-        WHEN NULL THEN 0
-        ELSE e.exposure
-    END AS exposure
-  FROM address_by_date a
-  LEFT JOIN exposure e ON a.address = e.address AND a.evt_block_week = e.evt_block_week
-
-),
-
-address_over_time AS (
-
-    SELECT
-        address,
-        evt_block_week,
-        sum(exposure) OVER (PARTITION BY address ORDER BY evt_block_week ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS exposure
-    FROM temp
 
 )
 
 SELECT
-  --
-FROM address_over_time
-  -- 
+  *
+FROM actions
+WHERE address != '\x0000000000000000000000000000000000000000
