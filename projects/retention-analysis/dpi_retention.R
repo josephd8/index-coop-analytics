@@ -1,7 +1,8 @@
 library(tidyverse)
 library(lubridate)
+library(plotly)
 
-dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_01_13.csv')
+dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_01_18.csv')
 
 View(dat %>%
   arrange(address, evt_block_minute))
@@ -59,25 +60,25 @@ groups <- temp %>%
   group_by(address) %>% 
   summarize(cohort = min(cohort), group = min(exposure_group))
 
-dates <- tibble(date = seq(ymd(date(min(t$date))), ymd(date(max(t$date))), by = "weeks"))
-
-t <- temp %>%
-  select(address) %>% full_join(dates, by = character()) %>% 
-  left_join(temp %>% select(address, date, amount), by = c('address', 'date'))
-
-t %>% 
-  mutate(amount = ifelse(is.na(amount), 0, amount)) %>%
-  group_by(address) %>%
-  mutate(running_exposure = cumsum(amount)) %>%
-  left_join(temp %>% 
-              group_by(address) %>% 
-              summarize(cohort = min(cohort), group = min(exposure_group)), 
-            by = "address")
-  
-  
-
-
-t1 <- t %>% select(address) %>% full_join(dates, by = character()) %>% left_join(t, by = c('address', 'date'))
+# dates <- tibble(date = seq(ymd(date(min(t$date))), ymd(date(max(t$date))), by = "weeks"))
+# 
+# t <- temp %>%
+#   select(address) %>% full_join(dates, by = character()) %>% 
+#   left_join(temp %>% select(address, date, amount), by = c('address', 'date'))
+# 
+# t %>% 
+#   mutate(amount = ifelse(is.na(amount), 0, amount)) %>%
+#   group_by(address) %>%
+#   mutate(running_exposure = cumsum(amount)) %>%
+#   left_join(temp %>% 
+#               group_by(address) %>% 
+#               summarize(cohort = min(cohort), group = min(exposure_group)), 
+#             by = "address")
+#   
+#   
+# 
+# 
+# t1 <- t %>% select(address) %>% full_join(dates, by = character()) %>% left_join(t, by = c('address', 'date'))
 
 cntr <- 1
 for(t_address in unique(temp$address)) {
@@ -143,10 +144,252 @@ fin %>%
        caption = "Source: Dune Analytics", 
        col = "cohort")
   
+# testing plotly
 
-# some things are off
-# not getting cohorts right
-# need to only include days where 25%+ of the cohort has reached
-# re-order the legend
+y <- fin %>%
+  filter((cohort == 'sep' & day <= sep_include) |
+           (cohort == 'oct' & day <= oct_include) |
+           (cohort == 'nov' & day <= nov_include) |
+           (cohort == 'dec' & day <= dec_include) |
+           (cohort == 'jan' & day <= jan_include)
+  ) %>%
+  group_by(day, cohort) %>%
+  summarize(retention = mean(retained))
+
+  ggplotly(ggplot(data = y, aes(x = day, y = retention, color = cohort)) +
+  geom_line() +
+  theme_bw() +
+  xlab("days since initial exposure") + ylab("retention") +
+  labs(title = "DPI Retention", 
+       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
+       caption = "Source: Dune Analytics", 
+       col = "cohort"))
+
+# net DPI retention
+
+#edit this up a bit
+fin %>% 
+  filter(day <= round(max(day) * .75)) %>%
+  ungroup() %>% 
+  group_by(day) %>% 
+  summarize(amount = sum(amount)) %>%
+  summarize(day, amount, 
+            running_amount = cumsum(amount), 
+            net_retention = cumsum(amount) / first(amount)) %>%
+  ggplot(aes(x = day, y = net_retention)) +
+  geom_line() +
+  theme_bw() +
+  xlab("days since initial exposure") + ylab("amount of initial exposure") +
+  labs(title = "DPI Unit Retention", 
+       subtitle = "Growth in unit exposure aggregated across all addresses ever having DPI exposure.", 
+       caption = "Source: Dune Analytics", 
+       col = "cohort")
+  
+  
+ #   
+#   
+# initials <- temp %>% 
+#   group_by(address) %>% 
+#   filter(row_number() == 1) %>% 
+#   select(address, initial_amount = amount, date)
+#   
+# View(fin)
+# 
+# x <- fin %>%
+#   left_join(initials, by = 'address') %>%
+#   filter(initial_amount > 0) %>%
+#   group_by(address) %>%
+#   # mutate(index = (running_exposure + mean(running_exposure)) / (initial_amount + mean(running_exposure))) %>%
+#   mutate(index = (running_exposure) / (initial_amount)) %>%
+#   filter((cohort == 'sep' & day <= sep_include) |
+#            (cohort == 'oct' & day <= oct_include) |
+#            (cohort == 'nov' & day <= nov_include) |
+#            (cohort == 'dec' & day <= dec_include) |
+#            (cohort == 'jan' & day <= jan_include)
+#   ) %>%
+#   group_by(day, cohort) %>%
+#   summarize(net_retention = mean(index))
+# 
+# ggplotly(ggplot(data = x, aes(x = day, y = net_retention, color = cohort)) +
+#            geom_line() +
+#            theme_bw() +
+#            xlab("days since initial exposure") + ylab(" net retention") +
+#            labs(title = "Net DPI Retention", 
+#                 subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
+#                 caption = "Source: Dune Analytics", 
+#                 col = "cohort"))
+# 
+# 
+# 
+# fin %>%
+#   left_join(initials, by = 'address') %>%
+#   filter(initial_amount > 0) %>%
+#   group_by(address) %>%
+#   # mutate(index = (running_exposure + mean(running_exposure)) / (initial_amount + mean(running_exposure))) %>%
+#   mutate(index = (running_exposure) / (initial_amount)) %>%
+#   filter((cohort == 'sep' & day <= sep_include) |
+#            (cohort == 'oct' & day <= oct_include) |
+#            (cohort == 'nov' & day <= nov_include) |
+#            (cohort == 'dec' & day <= dec_include) |
+#            (cohort == 'jan' & day <= jan_include)
+#   ) %>%
+#   filter(day == 10, cohort == 'sep') %>%
+#   ggplot(aes(x = index)) + 
+#   geom_boxplot()
+
+
+# DPI retention by exposure group
+
+# edit these up a bit
+# <10
+fin %>%
+  filter((cohort == 'sep' & day <= sep_include) |
+           (cohort == 'oct' & day <= oct_include) |
+           (cohort == 'nov' & day <= nov_include) |
+           (cohort == 'dec' & day <= dec_include) |
+           (cohort == 'jan' & day <= jan_include)
+  ) %>%
+  filter(group == '<10') %>%
+  group_by(day, cohort) %>%
+  summarize(retention = mean(retained)) %>%
+  ggplot(aes(x = day, y = retention, color = cohort)) +
+  geom_line() +
+  theme_bw() +
+  xlab("days since initial exposure") + ylab("retention") +
+  labs(title = "DPI Retention | <10 DPI", 
+       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
+       caption = "Source: Dune Analytics", 
+       col = "cohort")
+
+# 10-49
+fin %>%
+  filter((cohort == 'sep' & day <= sep_include) |
+           (cohort == 'oct' & day <= oct_include) |
+           (cohort == 'nov' & day <= nov_include) |
+           (cohort == 'dec' & day <= dec_include) |
+           (cohort == 'jan' & day <= jan_include)
+  ) %>%
+  filter(group == '10-49') %>%
+  group_by(day, cohort) %>%
+  summarize(retention = mean(retained)) %>%
+  ggplot(aes(x = day, y = retention, color = cohort)) +
+  geom_line() +
+  theme_bw() +
+  xlab("days since initial exposure") + ylab("retention") +
+  labs(title = "DPI Retention | 10-49 DPI", 
+       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
+       caption = "Source: Dune Analytics", 
+       col = "cohort")
+
+# 50-249
+fin %>%
+  filter((cohort == 'sep' & day <= sep_include) |
+           (cohort == 'oct' & day <= oct_include) |
+           (cohort == 'nov' & day <= nov_include) |
+           (cohort == 'dec' & day <= dec_include) |
+           (cohort == 'jan' & day <= jan_include)
+  ) %>%
+  filter(group == '50-249') %>%
+  group_by(day, cohort) %>%
+  summarize(retention = mean(retained)) %>%
+  ggplot(aes(x = day, y = retention, color = cohort)) +
+  geom_line() +
+  theme_bw() +
+  xlab("days since initial exposure") + ylab("retention") +
+  labs(title = "DPI Retention | 50-249 DPI", 
+       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
+       caption = "Source: Dune Analytics", 
+       col = "cohort")
+
+# 250+
+fin %>%
+  filter((cohort == 'sep' & day <= sep_include) |
+           (cohort == 'oct' & day <= oct_include) |
+           (cohort == 'nov' & day <= nov_include) |
+           (cohort == 'dec' & day <= dec_include) |
+           (cohort == 'jan' & day <= jan_include)
+  ) %>%
+  filter(cohort != 'sep') %>%
+  filter(group == '250+') %>%
+  group_by(day, cohort) %>%
+  summarize(retention = mean(retained)) %>%
+  ggplot(aes(x = day, y = retention, color = cohort)) +
+  geom_line() +
+  theme_bw() +
+  xlab("days since initial exposure") + ylab("retention") +
+  labs(title = "DPI Retention | 250+ DPI", 
+       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
+       caption = "Source: Dune Analytics", 
+       col = "cohort")
+
+# number of address x exposure
+
+#edit these up a bit
+g <- groups %>% 
+  group_by(group, cohort) %>% 
+  summarize(addresses = n()) 
+
+g$cohort <- factor(g$cohort, levels = rev(c('jan', 'dec', 'nov', 'oct', 'sep')))
+g$group <- factor(g$group, levels = c('<10', '10-49', '50-249', '250+'))
+
+g %>%
+  ggplot(aes(fill = group, y = addresses, x = cohort)) + 
+  geom_bar(position = 'dodge', stat = 'identity') +
+  geom_text(aes(label = addresses),
+            size = 3,
+            vjust = 1.5, 
+            position = position_dodge(0.9)) + 
+  theme_bw() + 
+  xlab("") + ylab("addresses") +
+  labs(title = "DPI Holders Growth", 
+       caption = "Source: Dune Analytics", 
+       fill = 'DPI Exposure')
+
+# g %>%
+#   ggplot(aes(fill = group, y = addresses, x = cohort)) + 
+#   geom_bar(position = 'stack', stat = 'identity') +
+#   theme_bw()
+
+g %>%
+  ggplot(aes(fill = group, y = addresses, x = cohort)) + 
+  geom_bar(position = 'fill', stat = 'identity') +
+  theme_bw() + 
+  xlab("") + ylab("% of addresses") +
+  labs(title = "DPI Holder Exposure Distribution", 
+       caption = "Source: Dune Analytics", 
+       fill = 'DPI Exposure')
+
+
+table(groups$group, groups$cohort)
+
+
+# DPI Whale Retention
+
+whale <- fin %>%
+  filter(group == '250+')
+
+# what is interesting about whales?
+# retaining "whale" status
+# net retention
+
+whale %>%
+  filter(group == '250+' & cohort != 'sep') %>%
+  filter((cohort == 'sep' & day <= sep_include) |
+           (cohort == 'oct' & day <= oct_include) |
+           (cohort == 'nov' & day <= nov_include) |
+           (cohort == 'dec' & day <= dec_include) |
+           (cohort == 'jan' & day <= jan_include)
+  ) %>%
+  mutate(whale_retention = ifelse(running_exposure >= 250, 1, 0)) %>%
+  group_by(day, cohort) %>%
+  summarize(whale = mean(whale_retention)) %>%
+  ggplot(aes(x = day, y = whale, color = cohort)) +
+  geom_line() +
+  theme_bw() +
+  xlab("days since initial exposure") + ylab("% of whales retained as whales") +
+  labs(title = "DPI Whale Retention", 
+       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
+       caption = "Source: Dune Analytics", 
+       col = "cohort")
 
 
