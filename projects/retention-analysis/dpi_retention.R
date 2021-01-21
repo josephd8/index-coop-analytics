@@ -1,6 +1,7 @@
 library(tidyverse)
 library(lubridate)
 library(plotly)
+library(gridExtra)
 
 dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_01_18.csv')
 
@@ -142,7 +143,8 @@ fin %>%
   labs(title = "DPI Retention", 
        subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
        caption = "Source: Dune Analytics", 
-       col = "cohort")
+       col = "cohort") +
+  scale_colour_colorblind()
   
 # testing plotly
 
@@ -163,7 +165,8 @@ y <- fin %>%
   labs(title = "DPI Retention", 
        subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
        caption = "Source: Dune Analytics", 
-       col = "cohort"))
+       col = "cohort") +
+    scale_colour_colorblind()) 
 
 # net DPI retention
 
@@ -183,7 +186,8 @@ fin %>%
   labs(title = "DPI Unit Retention", 
        subtitle = "Growth in unit exposure aggregated across all addresses ever having DPI exposure.", 
        caption = "Source: Dune Analytics", 
-       col = "cohort")
+       col = "cohort") +
+  scale_colour_colorblind()
   
   
  #   
@@ -242,7 +246,7 @@ fin %>%
 
 # edit these up a bit
 # <10
-fin %>%
+l1 <- fin %>%
   filter((cohort == 'sep' & day <= sep_include) |
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
@@ -255,14 +259,13 @@ fin %>%
   ggplot(aes(x = day, y = retention, color = cohort)) +
   geom_line() +
   theme_bw() +
-  xlab("days since initial exposure") + ylab("retention") +
-  labs(title = "DPI Retention | <10 DPI", 
-       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
-       caption = "Source: Dune Analytics", 
-       col = "cohort")
+  xlab("") + ylab("retention") +
+  labs(subtitle = "<10 DPI", 
+       col = "cohort") +
+  scale_colour_colorblind()
 
 # 10-49
-fin %>%
+l2 <- fin %>%
   filter((cohort == 'sep' & day <= sep_include) |
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
@@ -275,14 +278,13 @@ fin %>%
   ggplot(aes(x = day, y = retention, color = cohort)) +
   geom_line() +
   theme_bw() +
-  xlab("days since initial exposure") + ylab("retention") +
-  labs(title = "DPI Retention | 10-49 DPI", 
-       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
-       caption = "Source: Dune Analytics", 
-       col = "cohort")
+  xlab("") + ylab("") +
+  labs(subtitle = "10-49 DPI", 
+       col = "cohort") +
+  scale_colour_colorblind()
 
 # 50-249
-fin %>%
+l3 <- fin %>%
   filter((cohort == 'sep' & day <= sep_include) |
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
@@ -296,13 +298,12 @@ fin %>%
   geom_line() +
   theme_bw() +
   xlab("days since initial exposure") + ylab("retention") +
-  labs(title = "DPI Retention | 50-249 DPI", 
-       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
-       caption = "Source: Dune Analytics", 
-       col = "cohort")
+  labs(subtitle = '50-249 DPI',
+       col = "cohort") +
+  scale_colour_colorblind()
 
 # 250+
-fin %>%
+l4 <- fin %>%
   filter((cohort == 'sep' & day <= sep_include) |
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
@@ -316,11 +317,25 @@ fin %>%
   ggplot(aes(x = day, y = retention, color = cohort)) +
   geom_line() +
   theme_bw() +
-  xlab("days since initial exposure") + ylab("retention") +
-  labs(title = "DPI Retention | 250+ DPI", 
-       subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
-       caption = "Source: Dune Analytics", 
-       col = "cohort")
+  xlab("days since initial exposure") + ylab("") +
+  labs(subtitle = "250+ DPI (Whale)", 
+       col = "cohort") +
+  scale_colour_colorblind()
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+legen <- g_legend(l1)
+
+grid.arrange(arrangeGrob(l1 + theme(legend.position="none"), 
+                         l2 + theme(legend.position="none"), 
+                         l3 + theme(legend.position="none"), 
+                         l4 + theme(legend.position="none"), nrow = 2), 
+             legen, ncol = 2, widths = c(9, 2))
+
 
 # number of address x exposure
 
@@ -338,12 +353,14 @@ g %>%
   geom_text(aes(label = addresses),
             size = 3,
             vjust = 1.5, 
-            position = position_dodge(0.9)) + 
+            position = position_dodge(0.9),
+            color = 'white') + 
   theme_bw() + 
   xlab("") + ylab("addresses") +
   labs(title = "DPI Holders Growth", 
        caption = "Source: Dune Analytics", 
-       fill = 'DPI Exposure')
+       fill = 'DPI Exposure') +
+  scale_fill_colorblind()
 
 # g %>%
 #   ggplot(aes(fill = group, y = addresses, x = cohort)) + 
@@ -357,7 +374,8 @@ g %>%
   xlab("") + ylab("% of addresses") +
   labs(title = "DPI Holder Exposure Distribution", 
        caption = "Source: Dune Analytics", 
-       fill = 'DPI Exposure')
+       fill = 'DPI Exposure') +
+  scale_fill_colorblind()
 
 
 table(groups$group, groups$cohort)
@@ -390,6 +408,78 @@ whale %>%
   labs(title = "DPI Whale Retention", 
        subtitle = "Cohorts determined by the month of initial exposure to DPI.", 
        caption = "Source: Dune Analytics", 
-       col = "cohort")
+       col = "cohort") +
+  scale_colour_colorblind()
+
+
+# AUM x Exposure Levels
+
+# how to best combine this visual with the # of addresses in each group?
+# stacked vertically with one x axis (date)
+# # addresses, AUM, % of AUM
+
+fin$group <- factor(fin$group, levels = c('<10', '10-49', '50-249', '250+'))
+
+a <- fin %>%
+  group_by(group, date) %>%
+  summarize(addresses = n_distinct(address)) %>%
+  ggplot(aes(x = date, y = addresses, color = group)) +
+  geom_line() +
+  theme_bw() +
+  labs(y = "Absolute #", x = "", col = "DPI Exposure Level") + 
+  scale_colour_colorblind()
+
+b <- fin %>%
+  group_by(group, date) %>%
+  summarize(addresses = n_distinct(address)) %>%
+  group_by(date) %>%
+  summarize(group, date, addresses, p = addresses / sum(addresses)) %>%
+  ggplot(aes(x = date, y = p, color = group)) +
+  geom_line() +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  labs(y = "% of Total", title = "Addresses w/ DPI Exposure") +
+  scale_colour_colorblind()
+
+c <- fin %>% 
+  group_by(group, date) %>%
+  summarize(exposure = sum(running_exposure)) %>%
+  group_by(date) %>%
+  summarize(group, date, exposure, p = exposure / sum(exposure)) %>%
+  ggplot(aes(x = date, y = exposure, color = group)) +
+  geom_line() +
+  theme_bw() +
+  labs(x = "", y = "") +
+  scale_colour_colorblind()
+
+d <- fin %>% 
+  # group_by(address) %>% 
+  # # filter(date == max(date)) %>%
+  group_by(group, date) %>%
+  summarize(exposure = sum(running_exposure)) %>%
+  group_by(date) %>%
+  summarize(group, date, exposure, p = exposure / sum(exposure)) %>%
+  ggplot(aes(x = date, y = p, color = group)) +
+  geom_line() +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  labs(y = "", title = "DPI AUM") +
+  scale_colour_colorblind()
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+leg <- g_legend(a)
+
+grid.arrange(arrangeGrob(b + theme(legend.position="none"), 
+             d + theme(legend.position="none"), 
+             a + theme(legend.position="none"), 
+             c + theme(legend.position="none"), nrow = 2), leg, ncol = 2, widths = c(9, 2))
+
+
+
 
 
