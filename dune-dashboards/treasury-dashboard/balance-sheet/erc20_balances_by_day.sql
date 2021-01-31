@@ -5,14 +5,13 @@
         1. Join with USD prices to get Dollar value of Treasury 
             - Requires Dune Analytics and CoinPaprika to add INDEX and DPI as assets
         2. Create combined ETH + ERC-20 query
-        3. Join to a table of calendar dates to get latest balances by week, month, year, etc.
 
 */
 
 WITH transfers AS (
 
     SELECT
-        evt_block_time,
+        date_trunc('day', evt_block_time) AS day,
         evt_tx_hash AS tx_hash,
         tr."from" AS address,
         -tr.value AS amount,
@@ -25,7 +24,7 @@ WITH transfers AS (
 UNION ALL
 
     SELECT
-        evt_block_time,
+        date_trunc('day', evt_block_time) AS day,
         evt_tx_hash AS tx_hash,
         tr."to" AS address,
         tr.value AS amount,
@@ -40,7 +39,7 @@ UNION ALL
 , transfer_amounts AS (
 
     SELECT 
-        evt_block_time,
+        day,
         'Index Token Treasury' AS "wallet",
         address,
         
@@ -54,7 +53,7 @@ UNION ALL
     FROM transfers 
     
     GROUP BY 
-        evt_block_time,
+        day,
         address,
         contract_address,
         
@@ -66,33 +65,49 @@ UNION ALL
     ORDER BY "units" DESC
 )
 
-/* --- Main Query --- */
-SELECT 
-    tats.evt_block_time, 
-    to_char(tats.evt_block_time, 'YYYY-MM') AS "Year-Month",
-    tats.Wallet,
-    tats.address,
-    tats.Assets,
-    tats.contract_address,
-    tats.Units, 
-    sum(tats.Units) OVER (PARTITION BY tats.Assets ORDER BY tats.evt_block_time ASC) AS Balance 
+
+, days AS (
+
+    SELECT generate_series('2020-07-01'::timestamp, date_trunc('day', NOW()), '1 day') AS day -- Generate all days since the first contract
+
+)
+
+
+, balances_with_gap_days AS (
+
+    SELECT  t.day,
+            t.wallet,
+            address,
+            t.contract_address,
+            t.assets,
+            SUM(units) OVER (PARTITION BY contract_address, address ORDER BY t.day) AS balance, -- balance per day with a transfer
+            lead(day, 1, now()) OVER (PARTITION BY contract_address, address ORDER BY t.day) AS next_day -- the day after a day with a transfer
+            
+    FROM transfer_amounts t
     
-FROM transfer_amounts tats
+)
+
+, balance_all_days AS (
+    SELECT  d.day,
+            b.wallet,
+            b.address,
+            --erc.symbol,
+            b.contract_address,
+            b.assets,
+            SUM(balance) AS balance
+    FROM balances_with_gap_days b
+    INNER JOIN days d ON b.day <= d.day AND d.day < b.next_day -- Yields an observation for every day after the first transfer until the next day with transfer
+    --INNER JOIN erc20.tokens erc ON b.contract_address = erc.contract_address
+    GROUP BY d.day, b.wallet,b.address, b.contract_address, b.assets
+    ORDER BY b.assets, d.day DESC 
+    )
+
+
+/* --- Main Query --- */
+
+SELECT *
+
+FROM balance_all_days
 
 WHERE address = '\x9467cfadc9de245010df95ec6a585a506a8ad5fc'
 
-GROUP BY
-    tats.Wallet,
-    tats.address,
-    tats.Assets,
-    tats.contract_address,
-    tats.Units, 
-    tats.evt_block_time,
-    to_char(tats.evt_block_time, 'YYYY-MM')
-    
-ORDER BY
-    tats.Wallet,
-    tats.address,
-    tats.Assets,
-    tats.contract_address,
-    tats.evt_block_time ASC
