@@ -1,33 +1,29 @@
-/* 
-    Etherscan URL: https://etherscan.io/address/0x9467cfadc9de245010df95ec6a585a506a8ad5fc
-
-*/
-
 WITH transfers AS (
 
     SELECT
-        --evt_block_time,
-        evt_tx_hash AS tx_hash,
+        tr.evt_block_time,
+        tr.evt_tx_hash AS tx_hash,
         tr."from" AS address,
         -tr.value AS amount,
-        contract_address
+        tr.contract_address
     
     FROM erc20."ERC20_evt_Transfer" tr
     
-    WHERE contract_address IN ('\x0954906da0bf32d5479e25f46056d22f08464cab', '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b')
+    WHERE 
+    tr.contract_address IN ('\x0954906da0bf32d5479e25f46056d22f08464cab', '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b')
      
 UNION ALL
 
     SELECT
-        --evt_block_time,    
+        evt_block_time,
         evt_tx_hash AS tx_hash,
         tr."to" AS address,
         tr.value AS amount,
-        contract_address
+        tr.contract_address
     
     FROM erc20."ERC20_evt_Transfer" tr 
     
-    where contract_address IN ('\x0954906da0bf32d5479e25f46056d22f08464cab', '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b')
+    WHERE tr.contract_address IN ('\x0954906da0bf32d5479e25f46056d22f08464cab', '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b')
      
 )
 
@@ -35,33 +31,61 @@ UNION ALL
 
     SELECT 
         --evt_block_time,    
-        'Index Token Treasury' AS "Wallet",
-        address,
-        
-        CASE WHEN contract_address = '\x0954906da0bf32d5479e25f46056d22f08464cab' THEN 'INDEX'
-             WHEN contract_address = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN 'DPI'
-             END AS "Assets",
-        
+        'Index Token Treasury' AS "wallet",
+        address as wallet_address, 
         contract_address,
-        sum(amount)/1e18 AS "Units" 
+        sum(amount)/1e18 AS "units"
     
     FROM transfers 
     
     GROUP BY 
         --evt_block_time,
         address,
-        contract_address,
-        
-        CASE WHEN contract_address = '\x0954906da0bf32d5479e25f46056d22f08464cab' THEN 'INDEX'
-             WHEN contract_address = '\x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b' THEN 'DPI'
-             END 
-        
-        
-    ORDER BY "Units" DESC
+        contract_address
 )
 
-SELECT *
+, most_recent_prices AS (
+
+    SELECT 
+        symbol, 
+        contract_address,
+        price
+    
+    FROM (
+
+        SELECT 
+            symbol, 
+            contract_address,
+            price,
+            minute,
+            ROW_NUMBER() OVER (PARTITION BY contract_address ORDER BY minute DESC) AS RowNumber
+            
+        FROM prices.usd 
+        
+        WHERE symbol IN ('DPI', 'INDEX') 
+    
+    ) asset_prices    
+
+    WHERE RowNumber = 1
+
+)
+
+
+SELECT 
+    wallet,
+    wallet_address,
+    symbol, 
+    mrp.contract_address, 
+    units, 
+    price, 
+    (units * price) as balance
+    
 
 FROM transfer_amounts tats
 
-WHERE address = '\x9467cfadc9de245010df95ec6a585a506a8ad5fc'
+LEFT JOIN most_recent_prices mrp ON mrp.contract_address = tats.contract_address
+
+WHERE wallet_address = '\x9467cfadc9de245010df95ec6a585a506a8ad5fc'
+
+
+
