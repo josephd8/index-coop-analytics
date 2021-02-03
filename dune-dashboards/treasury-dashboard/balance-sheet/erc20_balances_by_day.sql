@@ -40,7 +40,7 @@ UNION ALL
 
     SELECT 
         day,
-        'Index Token Treasury' AS "wallet",
+        'Index Treasury Wallets' AS "wallet",
         address,
         
         CASE WHEN contract_address = '\x0954906da0bf32d5479e25f46056d22f08464cab' THEN 'INDEX'
@@ -90,7 +90,7 @@ UNION ALL
 , balance_all_days AS (
     SELECT  d.day,
             b.wallet,
-            b.address,
+            --b.address,
             --erc.symbol,
             b.contract_address,
             b.assets,
@@ -98,9 +98,22 @@ UNION ALL
     FROM balances_with_gap_days b
     INNER JOIN days d ON b.day <= d.day AND d.day < b.next_day -- Yields an observation for every day after the first transfer until the next day with transfer
     --INNER JOIN erc20.tokens erc ON b.contract_address = erc.contract_address
-    GROUP BY d.day, b.wallet,b.address, b.contract_address, b.assets
+    
+    WHERE b.address IN ('\x9467cfadc9de245010df95ec6a585a506a8ad5fc', -- Treasury Wallet
+                      '\xe2250424378b6a6dC912f5714cfd308a8D593986', -- Treasury Committee Wallet
+                      '\x26e316f5b3819264DF013Ccf47989Fb8C891b088' -- Community Treasury Year 1 Vesting
+                     )    
+    
+    GROUP BY 
+        d.day,
+        b.wallet,
+        --b.address,
+        b.contract_address,
+        b.assets
+        
     ORDER BY b.assets, d.day DESC 
-    )
+
+)
 
 
 /* --- Main Query --- */
@@ -109,5 +122,5 @@ SELECT *
 
 FROM balance_all_days
 
-WHERE address = '\x9467cfadc9de245010df95ec6a585a506a8ad5fc'
+
 
