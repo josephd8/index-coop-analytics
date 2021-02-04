@@ -3,7 +3,7 @@ library(lubridate)
 library(plotly)
 library(gridExtra)
 
-dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_01_18.csv')
+dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_02_02.csv')
 
 View(dat %>%
   arrange(address, evt_block_minute))
@@ -85,7 +85,7 @@ cntr <- 1
 for(t_address in unique(temp$address)) {
 
   min_date <- min(temp %>% filter(address == t_address) %>% pull(date))
-  max_date <- lubridate::today()
+  max_date <- lubridate::today(tzone = 'GMT')
   cand <- tibble(address = t_address, date = seq(min_date, max_date, by="days"))
   
   if(cntr == 1){
