@@ -34,56 +34,6 @@ WITH transfers AS (
 
 ),
 
-uniswap AS (
-
-  SELECT
-    sender AS address,
-    (amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'uniswap_mint' AS type,
-    evt_tx_hash
-  FROM uniswap_v2."Pair_evt_Mint"
-  WHERE contract_address = '\x4d5ef58aac27d99935e5b6b4a6778ff292059991'
-
-  UNION ALL
-
-  SELECT
-    "to" AS address,
-    -(amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'uniswap_burn' AS type,
-    evt_tx_hash
-  FROM uniswap_v2."Pair_evt_Burn"
-  WHERE contract_address = '\x4d5ef58aac27d99935e5b6b4a6778ff292059991'
-      AND "to" != '\x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
-
-),
-
-sushi AS (
-
-  SELECT
-    sender AS address,
-    (amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'sushi_mint' AS type,
-    evt_tx_hash
-  FROM sushi."Pair_evt_Mint"
-  WHERE contract_address = '\x34b13f8cd184f55d0bd4dd1fe6c07d46f245c7ed'
-
-  UNION ALL
-
-  SELECT
-    "to" AS address,
-    -(amount0/1e18) AS amount,
-    date_trunc('week', evt_block_time) AS evt_block_week,
-    'sushi_burn' AS type,
-    evt_tx_hash
-  FROM sushi."Pair_evt_Burn"
-  WHERE contract_address = '\x34b13f8cd184f55d0bd4dd1fe6c07d46f245c7ed'
-    AND "to" != '\xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f'
-
-),
-
 sushi_add AS (
 
   SELECT
