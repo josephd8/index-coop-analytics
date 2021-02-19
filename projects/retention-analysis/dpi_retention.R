@@ -2,8 +2,9 @@ library(tidyverse)
 library(lubridate)
 library(plotly)
 library(gridExtra)
+library(ggthemes)
 
-dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_02_02.csv')
+dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_02_04.csv')
 
 View(dat %>%
   arrange(address, evt_block_minute))
@@ -124,15 +125,17 @@ oct_include <- include_days %>% filter(cohort == 'oct') %>% pull(include_days)
 nov_include <- include_days %>% filter(cohort == 'nov') %>% pull(include_days)
 dec_include <- include_days %>% filter(cohort == 'dec') %>% pull(include_days)
 jan_include <- include_days %>% filter(cohort == 'jan') %>% pull(include_days)
+feb_include <- include_days %>% filter(cohort == 'feb') %>% pull(include_days)
 
-fin$cohort <- factor(fin$cohort, levels = c('jan', 'dec', 'nov', 'oct', 'sep'))
+fin$cohort <- factor(fin$cohort, levels = c('feb', 'jan', 'dec', 'nov', 'oct', 'sep'))
 
 fin %>%
   filter((cohort == 'sep' & day <= sep_include) |
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
            (cohort == 'dec' & day <= dec_include) |
-           (cohort == 'jan' & day <= jan_include)
+           (cohort == 'jan' & day <= jan_include) |
+           (cohort == 'feb' & day <= feb_include)
          ) %>%
   group_by(day, cohort) %>%
   summarize(retention = mean(retained)) %>%
@@ -153,7 +156,8 @@ y <- fin %>%
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
            (cohort == 'dec' & day <= dec_include) |
-           (cohort == 'jan' & day <= jan_include)
+           (cohort == 'jan' & day <= jan_include) |
+           (cohort == 'feb' & day <= feb_include)
   ) %>%
   group_by(day, cohort) %>%
   summarize(retention = mean(retained))
@@ -251,7 +255,8 @@ l1 <- fin %>%
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
            (cohort == 'dec' & day <= dec_include) |
-           (cohort == 'jan' & day <= jan_include)
+           (cohort == 'jan' & day <= jan_include) |
+           (cohort == 'feb' & day <= feb_include)
   ) %>%
   filter(group == '<10') %>%
   group_by(day, cohort) %>%
@@ -270,7 +275,8 @@ l2 <- fin %>%
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
            (cohort == 'dec' & day <= dec_include) |
-           (cohort == 'jan' & day <= jan_include)
+           (cohort == 'jan' & day <= jan_include) |
+           (cohort == 'feb' & day <= feb_include)
   ) %>%
   filter(group == '10-49') %>%
   group_by(day, cohort) %>%
@@ -289,7 +295,8 @@ l3 <- fin %>%
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
            (cohort == 'dec' & day <= dec_include) |
-           (cohort == 'jan' & day <= jan_include)
+           (cohort == 'jan' & day <= jan_include) |
+           (cohort == 'feb' & day <= feb_include)
   ) %>%
   filter(group == '50-249') %>%
   group_by(day, cohort) %>%
@@ -308,7 +315,8 @@ l4 <- fin %>%
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
            (cohort == 'dec' & day <= dec_include) |
-           (cohort == 'jan' & day <= jan_include)
+           (cohort == 'jan' & day <= jan_include) |
+           (cohort == 'feb' & day <= feb_include)
   ) %>%
   filter(cohort != 'sep') %>%
   filter(group == '250+') %>%
@@ -348,6 +356,7 @@ g$cohort <- factor(g$cohort, levels = rev(c('jan', 'dec', 'nov', 'oct', 'sep')))
 g$group <- factor(g$group, levels = c('<10', '10-49', '50-249', '250+'))
 
 g %>%
+  filter(cohort != 'feb') %>%
   ggplot(aes(fill = group, y = addresses, x = cohort)) + 
   geom_bar(position = 'dodge', stat = 'identity') +
   geom_text(aes(label = addresses),
@@ -396,7 +405,8 @@ whale %>%
            (cohort == 'oct' & day <= oct_include) |
            (cohort == 'nov' & day <= nov_include) |
            (cohort == 'dec' & day <= dec_include) |
-           (cohort == 'jan' & day <= jan_include)
+           (cohort == 'jan' & day <= jan_include) |
+           (cohort == 'feb' & day <= feb_include)
   ) %>%
   mutate(whale_retention = ifelse(running_exposure >= 250, 1, 0)) %>%
   group_by(day, cohort) %>%
