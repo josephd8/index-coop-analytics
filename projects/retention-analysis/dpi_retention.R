@@ -4,7 +4,7 @@ library(plotly)
 library(gridExtra)
 library(ggthemes)
 
-dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_02_04.csv')
+dat <- read_csv('projects/retention-analysis/data/DPI_Retention_Base_2021_03_04.csv')
 
 View(dat %>%
   arrange(address, evt_block_minute))
@@ -352,11 +352,11 @@ g <- groups %>%
   group_by(group, cohort) %>% 
   summarize(addresses = n()) 
 
-g$cohort <- factor(g$cohort, levels = rev(c('jan', 'dec', 'nov', 'oct', 'sep')))
+g$cohort <- factor(g$cohort, levels = rev(c('feb', 'jan', 'dec', 'nov', 'oct', 'sep')))
 g$group <- factor(g$group, levels = c('<10', '10-49', '50-249', '250+'))
 
 g %>%
-  filter(cohort != 'feb') %>%
+  # filter(cohort != 'feb') %>%
   ggplot(aes(fill = group, y = addresses, x = cohort)) + 
   geom_bar(position = 'dodge', stat = 'identity') +
   geom_text(aes(label = addresses),
